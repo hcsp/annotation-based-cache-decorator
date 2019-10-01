@@ -8,7 +8,7 @@
 
 -----
 注意！我们只允许你修改以下文件，对其他文件的修改会被拒绝：
-- [src/main/java/com/github/hcsp/annotation/CacheClassDecorator.java](https://github.com/hcsp/annotation-based-cache-decorator/blob/master/src/main/java/com/github/hcsp/annotation/CacheClassDecorator.java)
+- [src/main/java/com/github/hcsp/annotation/](https://github.com/hcsp/annotation-based-cache-decorator/blob/master/src/main/java/com/github/hcsp/annotation/)
 -----
 
 
