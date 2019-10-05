@@ -1,5 +1,19 @@
 package com.github.hcsp.annotation;
 
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.implementation.bind.annotation.AllArguments;
+import net.bytebuddy.implementation.bind.annotation.Origin;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
+import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.matcher.ElementMatchers;
+
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -8,7 +22,14 @@ public class CacheClassDecorator {
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
     public static <T> Class<T> decorate(Class<T> klass) {
-        return klass;
+        Class<T> loaded = (Class<T>) new ByteBuddy()
+                .subclass(klass)
+                .method(ElementMatchers.isAnnotatedWith(Cache.class))
+                .intercept(MethodDelegation.to(CacheAdvisor.class))
+                .make()
+                .load(klass.getClassLoader())
+                .getLoaded();
+        return loaded;
     }
 
     public static void main(String[] args) throws Exception {
@@ -23,5 +44,41 @@ public class CacheClassDecorator {
         System.out.println(dataService.queryDataWithoutCache(1));
         Thread.sleep(1 * 1000);
         System.out.println(dataService.queryDataWithoutCache(1));
+    }
+
+
+    public static class CacheAdvisor {
+
+        private static Map<String, CacheValue> map = new ConcurrentHashMap<>();
+
+        @RuntimeType
+        public static Object cache(
+                @SuperCall Callable<Object> superCall, @Origin Method method,
+                @AllArguments Object[] object) throws Exception {
+
+            String key = superCall.getClass().getName()
+                    + '_' + method.getName()
+                    + '_' + Arrays.toString(object);
+
+            int seconds = method.getAnnotation(Cache.class).cacheSeconds();
+            CacheValue cacheValue = map.get(key);
+
+            if (cacheValue == null || System.currentTimeMillis() > cacheValue.time + seconds * 1000) {
+                Object call = superCall.call();
+                cacheValue = new CacheValue(call, System.currentTimeMillis());
+                map.put(key, cacheValue);
+            }
+            return cacheValue.value;
+        }
+
+        private static class CacheValue {
+            private final Object value;
+            private final long time;
+
+            CacheValue(Object value, long time) {
+                this.value = value;
+                this.time = time;
+            }
+        }
     }
 }
