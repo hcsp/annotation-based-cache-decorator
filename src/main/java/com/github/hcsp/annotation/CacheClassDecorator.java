@@ -89,16 +89,11 @@ public class CacheClassDecorator {
                 @This Object thisObject,
                 @AllArguments Object[] arguments) throws Exception {
             CacheKey cacheKey = new CacheKey(thisObject, method.getName(), arguments);
-            final CacheValue resultExistingInCache = cache.get(cacheKey);
+            CacheValue cacheValue = cache.get(cacheKey);
 
-            if (resultExistingInCache != null) {
-                long time = resultExistingInCache.time;
-                int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
-                if (!cacheExpires(time, cacheSeconds)) {
-                    return resultExistingInCache.value;
-                }
+            if (cacheValue != null && !cacheExpires(cacheValue, method)) {
+                return cacheValue.value;
             }
-
             return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
         }
 
@@ -109,8 +104,10 @@ public class CacheClassDecorator {
             return methodInvocationResult;
         }
 
-        private static boolean cacheExpires(long time, int cacheSeconds) {
-            return System.currentTimeMillis() - time > cacheSeconds * 1000;
+        private static boolean cacheExpires(CacheValue cacheValue, Method method) {
+            long cacheTime = cacheValue.time;
+            int cachedSeconds = method.getAnnotation(Cache.class).cacheSeconds();
+            return System.currentTimeMillis() - cacheTime > cachedSeconds * 1000;
         }
 
     }
