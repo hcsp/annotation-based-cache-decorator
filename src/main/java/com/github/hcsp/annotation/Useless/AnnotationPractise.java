@@ -10,4 +10,5 @@ public class AnnotationPractise {
     void selectDatabase() {
         System.out.println("selectDatabase...");
     }
+
 }
