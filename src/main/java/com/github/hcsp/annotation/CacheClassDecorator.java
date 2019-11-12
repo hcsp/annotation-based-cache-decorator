@@ -1,21 +1,5 @@
 package com.github.hcsp.annotation;
 
-import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.AllArguments;
-import net.bytebuddy.implementation.bind.annotation.Origin;
-import net.bytebuddy.implementation.bind.annotation.RuntimeType;
-import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import net.bytebuddy.implementation.bind.annotation.This;
-import net.bytebuddy.matcher.ElementMatchers;
-
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -23,95 +7,8 @@ public class CacheClassDecorator {
     // 这意味着，在短时间内调用同一个服务的同一个@Cache方法两次
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
-    @SuppressWarnings("unchecked")
-    public static <T> Class<T> decorate(Class<T> klass) throws IllegalAccessException, InstantiationException {
-
-        return (Class<T>) new ByteBuddy()
-                .subclass(klass)
-                .name(klass.getName() + "WithCache")
-                .method(ElementMatchers.isAnnotatedWith(Cache.class))
-                .intercept(MethodDelegation.to(CacheAdvisor.class))
-                .make()
-                .load(klass.getClassLoader())
-                .getLoaded();
-
-    }
-
-    static class QueryKey {
-        Object thisObject;
-        String methodName;
-        Object[] arguments;
-
-        QueryKey(Object thisObject, String methodName, Object[] arguments) {
-            this.thisObject = thisObject;
-            this.methodName = methodName;
-            this.arguments = arguments;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (!(o instanceof QueryKey)) {
-                return false;
-            }
-            QueryKey queryKey = (QueryKey) o;
-            return Objects.equals(thisObject, queryKey.thisObject) &&
-                    Objects.equals(methodName, queryKey.methodName) &&
-                    Arrays.equals(arguments, queryKey.arguments);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = Objects.hash(thisObject, methodName);
-            result = 31 * result + Arrays.hashCode(arguments);
-            return result;
-        }
-    }
-
-    static class QueryValue {
-        long time;
-        Object queryResult;
-
-        QueryValue(long time, Object queryResult) {
-            this.time = time;
-            this.queryResult = queryResult;
-        }
-    }
-
-    public static class CacheAdvisor {
-        static Map<QueryKey, QueryValue> map = new ConcurrentHashMap<>();
-
-        @RuntimeType
-        public static Object cache(@SuperCall Callable<Object> zuper,
-                                   @This Object thisObject,
-                                   @Origin Method method,
-                                   @AllArguments Object[] arguments)
-
-                throws Exception {
-            QueryKey queryKey = new QueryKey(thisObject, method.getName(), arguments);
-            QueryValue resultExistInCache = map.get(queryKey);
-            if (resultExistInCache != null) {
-                long time = resultExistInCache.time;
-                int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
-                if (isCacheTimeout(time, cacheSeconds)) {
-                    return getQueryResult(zuper, queryKey);
-                }
-                return resultExistInCache.queryResult;
-            }
-            return getQueryResult(zuper, queryKey);
-        }
-
-        private static boolean isCacheTimeout(long time, int cacheSeconds) {
-            return System.currentTimeMillis() - time > cacheSeconds * 1000;
-        }
-
-        private static Object getQueryResult(@SuperCall Callable<Object> zuper, QueryKey queryKey) throws Exception {
-            Object queryResult = zuper.call();
-            map.put(queryKey, new QueryValue(System.currentTimeMillis(), queryResult));
-            return queryResult;
-        }
+    public static <T> Class<T> decorate(Class<T> klass) {
+        return klass;
     }
 
     public static void main(String[] args) throws Exception {
