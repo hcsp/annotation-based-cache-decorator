@@ -1,17 +1,5 @@
 package com.github.hcsp.annotation;
 
-import net.bytebuddy.ByteBuddy;
-
-import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.*;
-import net.bytebuddy.matcher.ElementMatchers;
-
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -19,98 +7,8 @@ public class CacheClassDecorator {
     // 这意味着，在短时间内调用同一个服务的同一个@Cache方法两次
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
-    @SuppressWarnings("unchecked")
     public static <T> Class<T> decorate(Class<T> klass) {
-        return (Class<T>) new ByteBuddy()
-                .subclass(klass)
-                .method(ElementMatchers.isAnnotatedWith(Cache.class))
-                .intercept(MethodDelegation.to(CacheAdvisor.class))
-                .make()
-                .load(klass.getClassLoader())
-                .getLoaded();
-
-
-    }
-
-    private static class CacheKey {
-        private Object thisObject;
-        private String methodName;
-        private Object[] arguments;
-
-        CacheKey(Object thisObject, String methodName, Object[] arguments) {
-            this.thisObject = thisObject;
-            this.methodName = methodName;
-            this.arguments = arguments;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            CacheKey cacheKey = (CacheKey) o;
-            return Objects.equals(thisObject, cacheKey.thisObject) &&
-                    Objects.equals(methodName, cacheKey.methodName) &&
-                    Arrays.equals(arguments, cacheKey.arguments);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = Objects.hash(thisObject, methodName);
-            result = 31 * result + Arrays.hashCode(arguments);
-            return result;
-        }
-    }
-
-    private static class CacheValue {
-        private Object value;
-        private long time;
-
-        CacheValue(Object value, long time) {
-            this.value = value;
-            this.time = time;
-        }
-    }
-
-    public static class CacheAdvisor {
-        private static ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
-
-        @RuntimeType
-        public static Object cache(
-                @SuperCall Callable<Object> superCall,
-                @Origin Method method,
-                @This Object thisObject,
-                @AllArguments Object[] arguments) throws Exception {
-            CacheKey cacheKey = new CacheKey(thisObject, method.getName(), arguments);
-
-            int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
-            final CacheValue resultExistingInCache = cache.get(cacheKey);
-
-            if (resultExistingInCache != null) {
-                long time = resultExistingInCache.time;
-                if (cacheIsExpired(time, cacheSeconds)) {
-                    return putNewValueIntoCache(superCall, cacheKey);
-                } else {
-                    return resultExistingInCache.value;
-                }
-            } else {
-                return putNewValueIntoCache(superCall, cacheKey);
-            }
-        }
-
-        private static boolean cacheIsExpired(long time, long cacheSeconds) {
-            return ((System.currentTimeMillis() - time) > cacheSeconds * 1000);
-        }
-
-        private static Object putNewValueIntoCache(@SuperCall Callable<Object> superCall, CacheKey cachekey) throws Exception {
-            Object realRusult = superCall.call();
-            CacheValue cacheValue = new CacheValue(realRusult, System.currentTimeMillis());
-            cache.put(cachekey, cacheValue);
-            return realRusult;
-        }
+        return klass;
     }
 
     public static void main(String[] args) throws Exception {
