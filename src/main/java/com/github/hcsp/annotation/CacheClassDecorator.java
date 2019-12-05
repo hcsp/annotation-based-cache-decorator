@@ -23,7 +23,7 @@ public class CacheClassDecorator {
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
     @SuppressWarnings("unchecked")
-    public static <T> Class<T> decorate(Class<T> klass) {
+    static <T> Class<T> decorate(Class<T> klass) {
         return (Class<T>) new ByteBuddy()
                 .subclass(klass)
                 .method(ElementMatchers.isAnnotatedWith(Cache.class))
@@ -39,6 +39,9 @@ public class CacheClassDecorator {
         private Object[] arguments;
 
         CacheKey(Object thisObject, String name, Object[] arguments) {
+            this.thisObject = thisObject;
+            this.methodName = name;
+            this.arguments = arguments;
         }
 
         @Override
@@ -87,21 +90,26 @@ public class CacheClassDecorator {
             final CacheValue resultInCache = cache.get(cacheKey);
 
             if (resultInCache != null) {
-                long time = resultInCache.time;
-                int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
-
-                if (System.currentTimeMillis() - time > cacheSeconds * 100) {
-                    Object methodResult = superCall.call();
-                    cache.put(cacheKey, new CacheValue(methodResult, System.currentTimeMillis()));
-                    return methodResult;
+                if (cacheExpires(resultInCache, method)) {
+                    return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
                 } else {
                     return resultInCache.value;
                 }
             } else {
-                Object methodResult = superCall.call();
-                cache.put(cacheKey, new CacheValue(methodResult, System.currentTimeMillis()));
-                return methodResult;
+                return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
             }
+        }
+
+        private static Object invokeRealMethodAndPutIntoCache(@SuperCall Callable<Object> superCall, CacheKey cacheKey) throws Exception {
+            Object methodResult = superCall.call();
+            cache.put(cacheKey, new CacheValue(methodResult, System.currentTimeMillis()));
+            return methodResult;
+        }
+
+        private static boolean cacheExpires(CacheValue cacheValue, Method method) {
+            long time = cacheValue.time;
+            int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
+            return System.currentTimeMillis() - time > cacheSeconds * 1000;
         }
     }
 
