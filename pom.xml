@@ -44,13 +44,6 @@
             <version>5.4.2</version>
             <scope>test</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/net.bytebuddy/byte-buddy -->
-        <dependency>
-            <groupId>net.bytebuddy</groupId>
-            <artifactId>byte-buddy</artifactId>
-            <version>1.10.4</version>
-        </dependency>
-
     </dependencies>
 
     <build>
