@@ -19,7 +19,7 @@ public class CacheClassDecorator {
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
     @SuppressWarnings("unchecked")
-    public static <T> Class<T> decorate(Class<T> klass) {
+    static <T> Class<T> decorate(Class<T> klass) {
         return (Class<T>) new ByteBuddy()  //动态字节码增强
                 .subclass(klass)  // 对目标klass子类化，为原有的类增加功能继承,且为类型的子类
                 .method(ElementMatchers.isAnnotatedWith(Cache.class))  //对包含Cache这个注解的类进行处理
@@ -42,7 +42,7 @@ public class CacheClassDecorator {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o){
+            if (this == o) {
                 return true;
             }
             if (!(o instanceof CacheKey)) {
@@ -75,7 +75,7 @@ public class CacheClassDecorator {
 
     public static class CacheAdvisor {  //实现缓存功能，识别是谁会被拦截
 
-        public static ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap();
+        static ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap();
 
         @RuntimeType
         public static Object cache(
