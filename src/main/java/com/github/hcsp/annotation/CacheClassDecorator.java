@@ -1,5 +1,18 @@
 package com.github.hcsp.annotation;
 
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.implementation.bind.annotation.*;
+import net.bytebuddy.matcher.ElementMatchers;
+
+
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+
+
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -7,8 +20,104 @@ public class CacheClassDecorator {
     // 这意味着，在短时间内调用同一个服务的同一个@Cache方法两次
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
+    @SuppressWarnings("unchecked")
     public static <T> Class<T> decorate(Class<T> klass) {
-        return klass;
+        return (Class<T>) new ByteBuddy()  //动态字节码增强
+                .subclass(klass)  // 对目标klass子类化，为原有的类增加功能继承,且为类型的子类
+                .method(ElementMatchers.isAnnotatedWith(Cache.class))  //对包含Cache这个注解的类进行处理
+                .intercept(MethodDelegation.to(CacheAdvice.class)) //拦截,通过委托给这个类完成
+                .make()
+                .load(klass.getClassLoader())
+                .getLoaded();
+    }
+
+    private static class CacheKey {
+        private Object thisObject;
+        private String methodName;
+        private Object[] arguments;
+
+        CacheKey(Object thisObject, String methodName, Object[] arguments) {
+            this.thisObject = thisObject;
+            this.methodName = methodName;
+            this.arguments = arguments;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            CacheKey cacheKey = (CacheKey) o;
+            return Objects.equals(thisObject, cacheKey.thisObject) &&
+                    Objects.equals(methodName, cacheKey.methodName) &&
+                    Arrays.equals(arguments, cacheKey.arguments);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hash(thisObject, methodName);
+            result = 31 * result + Arrays.hashCode(arguments);
+            return result;
+        }
+
+    }
+
+    private static class CacheValue {
+        private Object value;
+        private long time;
+
+        CacheValue(Object value, long time) {
+            this.value = value;
+            this.time = time;
+        }
+    }
+
+    public static class CacheAdvice {
+        private static ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
+
+
+        @RuntimeType
+        public static Object cache(
+                @SuperCall Callable<Object> superCall,
+                @Origin Method method,
+                @This Object thisObject,
+                @AllArguments Object[] argument
+        ) throws Exception {
+            CacheKey cacheKey = new CacheKey(thisObject, method.getName(), argument);
+            final CacheValue 缓存中已经存在的结果 = cache.get(cacheKey);
+
+            if (缓存中已经存在的结果 != null) {
+                //这个缓存的结果是什么时候生成的？
+                if (cacheExpires(缓存中已经存在的结果, method)) {
+                    //缓存过期了
+                    return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
+
+                } else {
+                    return 缓存中已经存在的结果.value;
+                }
+            } else {
+                return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
+            }
+
+//            System.out.println(method);
+//            System.out.println(thisObject);
+//            System.out.println(Arrays.toString(argument));
+        }
+
+        private static boolean cacheExpires(CacheValue cacheValue, Method method) {
+            long time = cacheValue.time;
+            int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
+            return System.currentTimeMillis() - time > cacheSeconds * 1000;
+        }
+
+        private static Object invokeRealMethodAndPutIntoCache(@SuperCall Callable<Object> superCall, CacheKey cacheKey) throws Exception {
+            Object 真正的方法调用的结果 = superCall.call();
+            cache.put(cacheKey, new CacheValue(真正的方法调用的结果, System.currentTimeMillis()));
+            return 真正的方法调用的结果;
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -18,6 +127,9 @@ public class CacheClassDecorator {
         System.out.println(dataService.queryData(1));
         Thread.sleep(1 * 1000);
         System.out.println(dataService.queryData(1));
+        Thread.sleep(3 * 1000);
+        System.out.println(dataService.queryData(1));
+
 
         // 无缓存的查询：两次都执行了真正的查询操作
         System.out.println(dataService.queryDataWithoutCache(1));
