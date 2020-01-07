@@ -1,12 +1,5 @@
 package com.github.hcsp.annotation;
 
-import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.matcher.ElementMatchers;
-
-import java.util.Arrays;
-import java.util.Objects;
-
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -14,66 +7,8 @@ public class CacheClassDecorator {
     // 这意味着，在短时间内调用同一个服务的同一个@Cache方法两次
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
-    @SuppressWarnings("unchecked")
-    public static <T> Class<T> decorate(Class<T> klass) throws IllegalAccessException, InstantiationException {
-        return (Class<T>) new ByteBuddy()
-                .subclass(klass)
-                .method(ElementMatchers.isAnnotatedWith(Cache.class))
-                .intercept(MethodDelegation.to(ServiceInterceptor.class))
-                .make()
-                .load(klass.getClassLoader())
-                .getLoaded();
-    }
-
-    public static final class CacheKey {
-        private Object object;
-        private String methodName;
-        private Object[] parameter;
-
-        CacheKey(Object object, String methodName, Object[] parameter) {
-            this.object = object;
-            this.methodName = methodName;
-            this.parameter = parameter;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            CacheKey cacheKey = (CacheKey) o;
-            return Objects.equals(object, cacheKey.object) &&
-                    Objects.equals(methodName, cacheKey.methodName) &&
-                    Arrays.equals(parameter, cacheKey.parameter);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = Objects.hash(object, methodName);
-            result = 31 * result + Arrays.hashCode(parameter);
-            return result;
-        }
-    }
-
-    public static class CacheValue {
-        Object value;
-        long generateTime;
-
-        CacheValue(Object value, long generateTime) {
-            this.value = value;
-            this.generateTime = generateTime;
-        }
-
-        public Object getValue() {
-            return value;
-        }
-
-        long getGenerateTime() {
-            return generateTime;
-        }
+    public static <T> Class<T> decorate(Class<T> klass) {
+        return klass;
     }
 
     public static void main(String[] args) throws Exception {
