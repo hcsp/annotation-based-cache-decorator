@@ -9,6 +9,7 @@ public class CacheClassDecorator {
     // 注意，缓存的实现需要是线程安全的
     public static <T> Class<T> decorate(Class<T> klass) {
         return klass;
+
     }
 
     public static void main(String[] args) throws Exception {
