@@ -2,18 +2,14 @@ package com.github.hcsp.annotation;
 
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.AllArguments;
-import net.bytebuddy.implementation.bind.annotation.Origin;
-import net.bytebuddy.implementation.bind.annotation.RuntimeType;
-import net.bytebuddy.implementation.bind.annotation.This;
+import net.bytebuddy.implementation.bind.annotation.*;
 import net.bytebuddy.matcher.ElementMatchers;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CacheClassDecorator {
-    private static ConcurrentHashMap cacheMap = new ConcurrentHashMap();
 
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -46,15 +42,43 @@ public class CacheClassDecorator {
         System.out.println(dataService.queryDataWithoutCache(1));
     }
 
-    static class CacheInterceptor {
+    public static class CacheInterceptor {
+        private static ConcurrentHashMap<CacheKey, CacheValue> cacheMap = new ConcurrentHashMap<>();
+
         @RuntimeType
-        public static Object cache(@Origin Method method,
-                                   @This Object obj,
-                                   @AllArguments Object[] arguments) {
-            System.out.println(method.getName());
-            System.out.println(obj);
-            System.out.println(Arrays.toString(arguments));
-            return null;
+        public static java.lang.Object cache(@SuperCall Callable<Object> call,
+                                             @Origin Method method,
+                                             @This Object obj,
+                                             @AllArguments java.lang.Object[] arguments) {
+            CacheKey cacheKey = new CacheKey(method, obj, arguments);
+            if (isExistInCache(cacheKey)) {
+                CacheValue cacheValue = cacheMap.get(cacheKey);
+                int timeout = method.getAnnotation(Cache.class).cacheSeconds();
+                return isCacheTimeout(cacheValue, timeout) ?
+                        getValuesFromService(method, obj, arguments, call, cacheKey) :
+                        cacheValue.getValue();
+            } else {
+                return getValuesFromService(method, obj, arguments, call, cacheKey);
+            }
+        }
+
+        private static boolean isExistInCache(CacheKey cacheKey) {
+            return cacheMap.containsKey(cacheKey);
+        }
+
+        private static boolean isCacheTimeout(CacheValue cacheValue, int timeout) {
+            return System.currentTimeMillis() - cacheValue.getCacheTime() > timeout * 1000;
+        }
+
+        private static Object getValuesFromService(Method method, Object obj, Object[] arguments, Callable<Object> call, CacheKey cacheKey) {
+            try {
+                Object returnValue = call.call();
+//                Object returnValue = method.invoke(obj, arguments);
+                cacheMap.put(cacheKey, new CacheValue(returnValue, System.currentTimeMillis()));
+                return returnValue;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }
