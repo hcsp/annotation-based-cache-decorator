@@ -11,6 +11,8 @@ import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static java.lang.System.*;
+
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -34,7 +36,7 @@ public class CacheClassDecorator {
         private String methodName;
         private Object[] arguments;
 
-        public CacheKey(Object thisObject, String methodName, Object[] arguments) {
+        CacheKey(Object thisObject, String methodName, Object[] arguments) {
             this.thisObject = thisObject;
             this.methodName = methodName;
             this.arguments = arguments;
@@ -66,7 +68,7 @@ public class CacheClassDecorator {
         private Object value;
         private long time;
 
-        public CacheValue(Object value, long time) {
+        CacheValue(Object value, long time) {
             this.value = value;
             this.time = time;
         }
@@ -100,7 +102,7 @@ public class CacheClassDecorator {
         private static Object invokeRealMethodAndPutIntoCache(@SuperCall Callable<Object> superCall,
                                                               CacheKey cacheKey) throws Exception {
             Object realMethodInvocationResult = superCall.call();
-            cache.put(cacheKey, new CacheValue(realMethodInvocationResult, System.currentTimeMillis()));
+            cache.put(cacheKey, new CacheValue(realMethodInvocationResult, currentTimeMillis()));
             return realMethodInvocationResult;
         }
 
@@ -108,7 +110,7 @@ public class CacheClassDecorator {
             long time = cacheValue.time;
 
             int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
-            return System.currentTimeMillis() - time > cacheSeconds * 1000;
+            return currentTimeMillis() - time > cacheSeconds * 1000;
         }
     }
 
@@ -116,15 +118,15 @@ public class CacheClassDecorator {
         DataService dataService = decorate(DataService.class).getConstructor().newInstance();
 
         // 有缓存的查询：只有第一次执行了真正的查询操作，第二次从缓存中获取
-        System.out.println(dataService.queryData(1));
-        Thread.sleep(1 * 1000);
-        System.out.println(dataService.queryData(1));
-        Thread.sleep(3 * 1000);
-        System.out.println(dataService.queryData(1));
+        out.println(dataService.queryData(1));
+        Thread.sleep(1000);
+        out.println(dataService.queryData(1));
+        Thread.sleep( 3000);
+        out.println(dataService.queryData(1));
 
         // 无缓存的查询：两次都执行了真正的查询操作
-        System.out.println(dataService.queryDataWithoutCache(1));
-        Thread.sleep(1 * 1000);
-        System.out.println(dataService.queryDataWithoutCache(1));
+        out.println(dataService.queryDataWithoutCache(1));
+        Thread.sleep(1000);
+        out.println(dataService.queryDataWithoutCache(1));
     }
 }
