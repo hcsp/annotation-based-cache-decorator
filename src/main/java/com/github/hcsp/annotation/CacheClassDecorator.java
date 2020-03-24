@@ -88,7 +88,7 @@ public class CacheClassDecorator {
                 if (cacheExpires(resultExistingInCache, method)) {
                     return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
                 } else {
-                    return resultExistingInCache;
+                    return resultExistingInCache.value;
                 }
             } else {
                 return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
