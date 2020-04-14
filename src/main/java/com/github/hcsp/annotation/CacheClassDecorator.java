@@ -34,7 +34,7 @@ public class CacheClassDecorator {
         private String methodName;
         private Object[] arguments;
 
-        public CacheKey(Object thisObject, String methodName, Object[] arguments) {
+        CacheKey(Object thisObject, String methodName, Object[] arguments) {
             this.thisObject = thisObject;
             this.methodName = methodName;
             this.arguments = arguments;
@@ -42,8 +42,12 @@ public class CacheClassDecorator {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
             CacheKey cacheKey = (CacheKey) o;
             return Objects.equals(thisObject, cacheKey.thisObject) &&
                     Objects.equals(methodName, cacheKey.methodName) &&
@@ -58,8 +62,18 @@ public class CacheClassDecorator {
         }
     }
 
+    private static class CacheValue {
+        private Object value;
+        private long time;
+
+        CacheValue(Object value, long time) {
+            this.value = value;
+            this.time = time;
+        }
+    }
+
     public static class CacheAdvisor {
-        private static ConcurrentHashMap<CacheKey, Object> cache = new ConcurrentHashMap<>();
+        private static ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
 
         @RuntimeType
         public static Object cache(
@@ -68,18 +82,32 @@ public class CacheClassDecorator {
                 @This Object thisObject,
                 @AllArguments Object[] arguments) throws Exception {
             CacheKey cacheKey = new CacheKey(thisObject, method.getName(), arguments);
-            final Object resultExistingInCache = cache.get(cacheKey);
-            if (DoesTheCacheExist(resultExistingInCache)) {
-                return resultExistingInCache;
+            final CacheValue resultExistingInCache = cache.get(cacheKey);
+
+            if (resultExistingInCache != null) {
+
+                long time = resultExistingInCache.time;
+
+                int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
+
+                if (cacheExpires(time, cacheSeconds)) {
+                    return invokeRealMethodAndPuIntoCache(superCall, cacheKey);
+                }
+                return resultExistingInCache.value;
             } else {
-                Object realMenthodInvocationResult = superCall.call();
-                cache.put(cacheKey, realMenthodInvocationResult);
-                return realMenthodInvocationResult;
+                return invokeRealMethodAndPuIntoCache(superCall, cacheKey);
             }
         }
 
-        public static boolean DoesTheCacheExist(Object resultExistingInCache) {
-            return resultExistingInCache != null;
+        private static Object invokeRealMethodAndPuIntoCache(@SuperCall Callable<Object> superCall,
+                                                             CacheKey cacheKey) throws Exception {
+            Object realMenthodInvocationResult = superCall.call();
+            cache.put(cacheKey, new CacheValue(realMenthodInvocationResult, System.currentTimeMillis()));
+            return realMenthodInvocationResult;
+        }
+
+        public static boolean cacheExpires(long time, int cacheSeconds) {
+            return System.currentTimeMillis() - time > cacheSeconds * 1000;
         }
     }
 
