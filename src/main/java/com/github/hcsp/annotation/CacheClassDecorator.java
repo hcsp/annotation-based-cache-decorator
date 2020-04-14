@@ -69,13 +69,17 @@ public class CacheClassDecorator {
                 @AllArguments Object[] arguments) throws Exception {
             CacheKey cacheKey = new CacheKey(thisObject, method.getName(), arguments);
             final Object resultExistingInCache = cache.get(cacheKey);
-            if (resultExistingInCache != null) {
+            if (DoesTheCacheExist(resultExistingInCache)) {
                 return resultExistingInCache;
             } else {
                 Object realMenthodInvocationResult = superCall.call();
                 cache.put(cacheKey, realMenthodInvocationResult);
                 return realMenthodInvocationResult;
             }
+        }
+
+        public static boolean DoesTheCacheExist(Object resultExistingInCache) {
+            return resultExistingInCache != null;
         }
     }
 
