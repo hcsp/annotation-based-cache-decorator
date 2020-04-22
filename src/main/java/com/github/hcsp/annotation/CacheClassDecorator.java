@@ -34,7 +34,7 @@ public class CacheClassDecorator {
         private String methodName;
         private Object[] arguments;
 
-        public CacheKey(Object thisObject, String methodName, Object[] arguments) {
+        CacheKey(Object thisObject, String methodName, Object[] arguments) {
             this.thisObject = thisObject;
             this.methodName = methodName;
             this.arguments = arguments;
@@ -42,8 +42,12 @@ public class CacheClassDecorator {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
             CacheKey cacheKey = (CacheKey) o;
             return Objects.equals(thisObject, cacheKey.thisObject) &&
                     Objects.equals(methodName, cacheKey.methodName) &&
@@ -62,7 +66,7 @@ public class CacheClassDecorator {
         private Object value;
         private long time;
 
-        public CacheValue(Object value, long time) {
+        CacheValue(Object value, long time) {
             this.value = value;
             this.time = time;
         }
