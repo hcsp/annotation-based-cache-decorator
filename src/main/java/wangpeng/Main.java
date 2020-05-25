@@ -46,6 +46,13 @@ public class Main {
 
     private static boolean isAnnotationWithLog(Method method) {
         // 尝试通过反射获取方法上的注解
+        try {
+            Log logAnnotation = method.getAnnotation(Log.class);
+            String v = logAnnotation.value();
+            System.out.println(v + "111111111111111111");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return method.getAnnotation(Log.class) != null;
     }
 

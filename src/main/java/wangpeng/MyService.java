@@ -1,7 +1,7 @@
 package wangpeng;
 
 public class MyService {
-    @Log
+    @Log(value = "ERROR")
     public void queryDatabase(int param) {
         System.out.println("query db:" + param);
     }
