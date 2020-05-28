@@ -2,7 +2,11 @@ package com.github.hcsp.annotation;
 
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.*;
+import net.bytebuddy.implementation.bind.annotation.AllArguments;
+import net.bytebuddy.implementation.bind.annotation.Origin;
+import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bind.annotation.This;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.matcher.ElementMatchers;
 
 import java.lang.reflect.Method;
@@ -30,12 +34,12 @@ public class CacheClassDecorator {
                 .getLoaded();
     }
 
-    private static class cacheKey {
+    private static class CacheKey {
         private Object thisObject;
         private String methodName;
         private Object[] arogument;
 
-        private cacheKey(Object thisObject, String methodName, Object[] arogument) {
+        private CacheKey(Object thisObject, String methodName, Object[] arogument) {
             this.thisObject = thisObject;
             this.methodName = methodName;
             this.arogument = arogument;
@@ -49,10 +53,10 @@ public class CacheClassDecorator {
             if (o == null || getClass() != o.getClass()) {
                 return false;
             }
-            cacheKey cacheKey = (cacheKey) o;
-            return Objects.equals(thisObject, cacheKey.thisObject) &&
-                    Objects.equals(methodName, cacheKey.methodName) &&
-                    Arrays.equals(arogument, cacheKey.arogument);
+            CacheKey cacheKey = (CacheKey) o;
+            return Objects.equals(thisObject, cacheKey.thisObject)
+                    && Objects.equals(methodName, cacheKey.methodName)
+                    && Arrays.equals(arogument, cacheKey.arogument);
         }
 
         @Override
@@ -74,7 +78,7 @@ public class CacheClassDecorator {
     }
 
     public static class CacheAdivsor {
-        private static ConcurrentHashMap<cacheKey, CacheValue> cache = new ConcurrentHashMap<>();
+        private static ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
 
         @RuntimeType
         public static Object cache(
@@ -83,7 +87,7 @@ public class CacheClassDecorator {
                 @This Object thisObject,
                 @AllArguments Object[] arguments) throws Exception {
             System.currentTimeMillis();
-            cacheKey cacheKey = new cacheKey(thisObject, method.getName(), arguments);
+            CacheKey cacheKey = new CacheKey(thisObject, method.getName(), arguments);
 
             final CacheValue resultExistingIncache = cache.get(cacheKey);
 
@@ -103,7 +107,7 @@ public class CacheClassDecorator {
         }
 
         private static Object invokeRealMethodAndPutCache(@SuperCall Callable<Object> superCall,
-                                                          cacheKey cacheKey) throws Exception {
+                                                          CacheKey cacheKey) throws Exception {
 
             Object realMethodInvokecationResult = superCall.call();
             cache.put(cacheKey, new CacheValue(realMethodInvokecationResult, System.currentTimeMillis()));
