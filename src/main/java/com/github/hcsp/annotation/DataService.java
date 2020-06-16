@@ -14,12 +14,12 @@ public class DataService {
      */
     @Cache
     public List<Object> queryData(int id) {
-        /*
-         * 模拟一个查询操作
-         */
+        // 模拟一个查询操作
         Random random = new Random();
         int size = random.nextInt(10) + 10;
-        return IntStream.range(0, size).mapToObj(i -> random.nextInt(10)).collect(Collectors.toList());
+        return IntStream.range(0, size)
+                .mapToObj(i -> random.nextInt(10))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -29,11 +29,11 @@ public class DataService {
      * @return 查询到的数据列表
      */
     public List<Object> queryDataWithoutCache(int id) {
-        /*
-         * 模拟一个查询操作
-         */
+        // 模拟一个查询操作
         Random random = new Random();
         int size = random.nextInt(10) + 1;
-        return IntStream.range(0, size).mapToObj(i -> random.nextBoolean()).collect(Collectors.toList());
+        return IntStream.range(0, size)
+                .mapToObj(i -> random.nextBoolean())
+                .collect(Collectors.toList());
     }
 }
