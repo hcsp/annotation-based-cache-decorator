@@ -4,8 +4,8 @@ import java.util.Arrays;
 import java.util.Objects;
 
 public class CacheKey {
-    private String methodName;
-    private Object[] arguments;
+    private final String methodName;
+    private final Object[] arguments;
 
 
     public CacheKey(String methodName, Object[] arguments) {

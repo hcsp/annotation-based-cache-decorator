@@ -12,14 +12,20 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CacheAdvisor {
     public static ConcurrentHashMap<CacheKey, CacheValue> map = new ConcurrentHashMap<>();
 
+
+    @RuntimeType
+    public static Object cache1(  @SuperCall Callable<Object> superCall) throws Exception {
+        System.out.println("我也被执行了");
+        return superCall.call();
+    }
+
+    // 代码段 1
     @RuntimeType
     public static Object cache (
             @SuperCall Callable<Object> superCall,
             @Origin Method method,
             @AllArguments Object[] arguments
     ) throws Exception {
-        System.out.println("为什么这里没有进来呢？");
-        System.out.println(method.getName());
         CacheKey cacheKey = new CacheKey(method.getName(), arguments);
         CacheValue cacheValue = map.get(cacheKey);
 
@@ -33,9 +39,18 @@ public class CacheAdvisor {
         }
     }
 
+    // 为什么无论这段代码放在 代码段 1 的上面，还是下面，都不会被执行，除非注释掉代码段 1 ，它才会执行呢？
+//    @RuntimeType
+//    public static Object cache1(  @SuperCall Callable<Object> superCall) throws Exception {
+//        System.out.println("我也被执行了");
+//        return superCall.call();
+//    }
+
+
+
     private static boolean isOverdue(CacheValue cacheValue, Method method) {
         long time = method.getAnnotation(Cache.class).cacheSeconds();
 
-        return System.currentTimeMillis() - time * 1000 < cacheValue.getTime();
+        return System.currentTimeMillis() - time * 1000 > cacheValue.getTime();
     }
 }
