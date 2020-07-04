@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CacheAdvisor {
     public static ConcurrentHashMap<CacheKey, CacheValue> map = new ConcurrentHashMap<>();
 
-
+    // 放在前面依然不会被执行
     @RuntimeType
     public static Object cache1(  @SuperCall Callable<Object> superCall) throws Exception {
         System.out.println("我也被执行了");
@@ -39,7 +39,8 @@ public class CacheAdvisor {
         }
     }
 
-    // 为什么无论这段代码放在 代码段 1 的上面，还是下面，都不会被执行，除非注释掉代码段 1 ，它才会执行呢？
+    // 我想尝试在这个类里面写多个委托方法
+    // 但是，无论这段代码放在 代码段1 的上面，还是下面，都不会被执行，除非注释掉代码段1 ，它才会执行，这是有何原因呢？
 //    @RuntimeType
 //    public static Object cache1(  @SuperCall Callable<Object> superCall) throws Exception {
 //        System.out.println("我也被执行了");
