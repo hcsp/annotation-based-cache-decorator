@@ -1,5 +1,10 @@
 package com.github.hcsp.annotation;
 
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.matcher.ElementMatchers;
+
+
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -8,7 +13,13 @@ public class CacheClassDecorator {
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
     public static <T> Class<T> decorate(Class<T> klass) {
-        return klass;
+        return (Class<T>) new ByteBuddy()
+                .subclass(klass)
+                .method(ElementMatchers.isAnnotatedWith(Cache.class))
+                .intercept(MethodDelegation.to(CacheAdvisor.class))
+                .make()
+                .load(klass.getClassLoader())
+                .getLoaded();
     }
 
     public static void main(String[] args) throws Exception {
@@ -16,12 +27,12 @@ public class CacheClassDecorator {
 
         // 有缓存的查询：只有第一次执行了真正的查询操作，第二次从缓存中获取
         System.out.println(dataService.queryData(1));
-        Thread.sleep(1 * 1000);
+        Thread.sleep(1000);
         System.out.println(dataService.queryData(1));
 
-        // 无缓存的查询：两次都执行了真正的查询操作
-        System.out.println(dataService.queryDataWithoutCache(1));
-        Thread.sleep(1 * 1000);
-        System.out.println(dataService.queryDataWithoutCache(1));
+//        // 无缓存的查询：两次都执行了真正的查询操作
+//        System.out.println(dataService.queryDataWithoutCache(1));
+//        Thread.sleep(1 * 1000);
+//        System.out.println(dataService.queryDataWithoutCache(1));
     }
 }
