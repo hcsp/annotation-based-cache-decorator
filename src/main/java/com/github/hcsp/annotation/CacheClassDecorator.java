@@ -1,5 +1,9 @@
 package com.github.hcsp.annotation;
 
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.matcher.ElementMatchers;
+
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -7,8 +11,22 @@ public class CacheClassDecorator {
     // 这意味着，在短时间内调用同一个服务的同一个@Cache方法两次
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
+    @SuppressWarnings("unchecked")
     public static <T> Class<T> decorate(Class<T> klass) {
-        return klass;
+
+        return (Class<T>) new ByteBuddy()
+                //将父类子类化
+                .subclass(klass)
+                //拦截带@Cache注解的方法
+                .method(ElementMatchers.isAnnotatedWith(Cache.class))
+                //将带有@Runtimetype的说明书交给方法委托器来处理拦截的方法
+                .intercept(MethodDelegation.to(CacheAdvisor.class))
+                //创建新的类
+                .make()
+                //将这个类丢给父类的加载器
+                .load(klass.getClassLoader())
+                //加载
+                .getLoaded();
     }
 
     public static void main(String[] args) throws Exception {
