@@ -109,11 +109,13 @@ public class CacheClassDecorator {
                 return invokeRealMethodAndPutInCache(superCall, cacheKey);
             }
         }
+
         private static boolean isOverCachetSeconds(CacheValue cacheValue, Method method) {
             long time = cacheValue.getTime();
             int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
             return System.currentTimeMillis() - time > cacheSeconds * 1000;
         }
+
         //第一次或者缓存时间过后执行的真实的方法过程
         private static Object invokeRealMethodAndPutInCache(Callable<Object> superCall, CacheKey cacheKey) throws Exception {
             Object reallyResult = superCall.call();
