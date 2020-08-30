@@ -22,7 +22,6 @@ public class CacheClassDecorator {
     // 这意味着，在短时间内调用同一个服务的同一个@Cache方法两次
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
-    @SuppressWarnings("unchecked")
     public static <T> Class<T> decorate(Class<T> klass) {
         return (Class<T>) new ByteBuddy()
                 // 对带有cache缓存的方法进行增强
