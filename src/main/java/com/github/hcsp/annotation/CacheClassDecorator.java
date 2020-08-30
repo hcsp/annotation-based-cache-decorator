@@ -72,7 +72,7 @@ public class CacheClassDecorator {
         private Object value;
         private long time;
 
-         CacheValue(Object value, long time) {
+        CacheValue(Object value, long time) {
             this.value = value;
             this.time = time;
         }
@@ -80,29 +80,24 @@ public class CacheClassDecorator {
 
 
     public static class CacheAdvisor {
-        // 第一次执行真正的查询，第二次从换从中获取，那就要先写个map来存储第一次的缓存
         private static ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
 
         @RuntimeType
         public static Object cache(
                 @SuperCall Callable<Object> superCall,
-                // 是谁在调用哪个方法
                 @Origin Method method,
                 @This Object thisObject,
                 @AllArguments Object[] arguments) throws Exception {
             CacheKey cacheKey = new CacheKey(thisObject, method.getName(), arguments);
             final CacheValue resultExistInCache = cache.get(cacheKey);
             if (resultExistInCache != null) {
-                // 缓存的结果是什么时候生成的？
                 if (cacheExpires(resultExistInCache, method)) {
-                    // 缓存过期
                     return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
                 } else {
                     return resultExistInCache.value;
                 }
 
             } else {
-                // super.queryData(1)
                 return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
             }
         }
