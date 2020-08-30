@@ -12,9 +12,8 @@ public class DataService {
      * @param id 数据ID
      * @return 查询到的数据列表
      */
-    @Cache
+    @Cache(cacheSeconds = 2)
     public List<Object> queryData(int id) {
-        // 模拟一个查询操作
         Random random = new Random();
         int size = random.nextInt(10) + 10;
         return IntStream.range(0, size)
