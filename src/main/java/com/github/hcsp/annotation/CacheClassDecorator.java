@@ -2,7 +2,12 @@ package com.github.hcsp.annotation;
 
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.*;
+
+import net.bytebuddy.implementation.bind.annotation.Origin;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
+import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bind.annotation.This;
+import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.matcher.ElementMatchers;
 
 import java.lang.reflect.Method;
@@ -28,6 +33,7 @@ public class CacheClassDecorator {
                 .load(klass.getClassLoader())//将生成子类移交给父类的类加载器
                 .getLoaded();
     }
+
     public static class CacheKey {
         private String methodName;
         private Object thisObject;
@@ -48,9 +54,9 @@ public class CacheClassDecorator {
                 return false;
             }
             CacheKey cacheKey = (CacheKey) o;
-            return Objects.equals(methodName, cacheKey.methodName) &&
-                    Objects.equals(thisObject, cacheKey.thisObject) &&
-                    Arrays.equals(arguments, cacheKey.arguments);
+            return Objects.equals(methodName, cacheKey.methodName)
+                    && Objects.equals(thisObject, cacheKey.thisObject)
+                    && Arrays.equals(arguments, cacheKey.arguments);
         }
 
         @Override
