@@ -1,5 +1,16 @@
 package com.github.hcsp.annotation;
 
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.implementation.bind.annotation.*;
+import net.bytebuddy.matcher.ElementMatchers;
+
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -7,8 +18,88 @@ public class CacheClassDecorator {
     // 这意味着，在短时间内调用同一个服务的同一个@Cache方法两次
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
+    @SuppressWarnings("unchecked")
     public static <T> Class<T> decorate(Class<T> klass) {
-        return klass;
+        return (Class<T>) new ByteBuddy()
+                .subclass(klass)
+                .method(ElementMatchers.isAnnotatedWith(Cache.class))
+                .intercept(MethodDelegation.to(CacheData.class))
+                .make()
+                .load(klass.getClassLoader())//将生成子类移交给父类的类加载器
+                .getLoaded();
+    }
+    public static class CacheKey {
+        private String methodName;
+        private Object thisObject;
+        private Object[] arguments;
+
+        public CacheKey(String methodName, Object thisObject, Object[] arguments) {
+            this.methodName = methodName;
+            this.thisObject = thisObject;
+            this.arguments = arguments;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            CacheKey cacheKey = (CacheKey) o;
+            return Objects.equals(methodName, cacheKey.methodName) &&
+                    Objects.equals(thisObject, cacheKey.thisObject) &&
+                    Arrays.equals(arguments, cacheKey.arguments);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hash(methodName, thisObject);
+            result = 31 * result + Arrays.hashCode(arguments);
+            return result;
+        }
+    }
+
+    static class CacheValue {
+        private Object object;
+        private long time;
+
+        CacheValue(Object object, long time) {
+            this.object = object;
+            this.time = time;
+        }
+    }
+
+    public static class CacheData {
+        private static ConcurrentHashMap<CacheKey, CacheValue> cacheData = new ConcurrentHashMap<>();
+
+        //使触发拦截时，调用该方法
+        @RuntimeType
+        public static Object cache(@SuperCall Callable<Object> superCall, @Origin Method method, @This Object thisObject, @AllArguments Object[] arguments) throws Exception {
+            CacheKey cacheKey = new CacheKey(method.getName(), thisObject, arguments);
+            CacheValue resultExistingInCache = cacheData.get(cacheKey);
+            if (resultExistingInCache != null) {
+                if (isCacheExpires(resultExistingInCache, method)) {
+                    return invokeRealMethodAndPushIntoCache(superCall, cacheKey);
+                }
+                return resultExistingInCache.object;
+            } else {
+                return invokeRealMethodAndPushIntoCache(superCall, cacheKey);
+            }
+        }
+
+        private static Object invokeRealMethodAndPushIntoCache(@SuperCall Callable<Object> superCall, CacheKey cacheKey) throws Exception {
+            Object realMethodInvocationResult = superCall.call();
+            cacheData.put(cacheKey, new CacheValue(realMethodInvocationResult, System.currentTimeMillis()));
+            return realMethodInvocationResult;
+        }
+
+        private static boolean isCacheExpires(CacheValue cacheValue, Method method) {
+            long time = cacheValue.time;
+            int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
+            return System.currentTimeMillis() - time > cacheSeconds * 1000;
+        }
     }
 
     public static void main(String[] args) throws Exception {
