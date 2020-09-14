@@ -96,7 +96,7 @@ public class CacheClassDecorator {
 
                 int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
 
-                if ((System.currentTimeMillis() - time) > cacheSeconds*1000) {
+                if ((System.currentTimeMillis() - time) > cacheSeconds * 1000) {
                     // 缓存过期了
                     // 真正的方法调用的结果
                     Object result = superCall.call();
