@@ -85,8 +85,8 @@ public class DataServiceDecorator {
                 return false;
             }
             CacheKey newKey = (CacheKey) obj;
-            return (Objects.equals(newKey.getObject(), this.getObject()) && Objects
-                    .equals(newKey.getMethod(), this.getMethod()) && Arrays.equals(newKey.getArgs(), this.getArgs()));
+            return Objects.equals(newKey.getObject(), this.getObject()) && Objects
+                    .equals(newKey.getMethod(), this.getMethod()) && Arrays.equals(newKey.getArgs(), this.getArgs());
         }
 
         @Override public int hashCode() {
