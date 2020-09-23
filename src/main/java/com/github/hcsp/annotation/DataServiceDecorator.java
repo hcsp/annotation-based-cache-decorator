@@ -1,6 +1,11 @@
 package com.github.hcsp.annotation;
 
-import net.bytebuddy.implementation.bind.annotation.*;
+
+import net.bytebuddy.implementation.bind.annotation.AllArguments;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
+import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bind.annotation.This;
+import net.bytebuddy.implementation.bind.annotation.Origin;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -13,13 +18,8 @@ public class DataServiceDecorator {
 
     private static final Map<CacheKey, CacheValue> CACHE_DATA = new ConcurrentHashMap<>();
 
-
-    @RuntimeType
-    public static Object invoke(
-            @SuperCall Callable<Object> superCall,
-            @Origin Method method,
-            @This Object thisObject,
-            @AllArguments Object[] arguments) throws Exception {
+    @RuntimeType public static Object invoke(@SuperCall Callable<Object> superCall, @Origin Method method,
+            @This Object thisObject, @AllArguments Object[] arguments) throws Exception {
         CacheKey cacheKey = new CacheKey(thisObject, method, arguments);
         CacheValue cacheValue = CACHE_DATA.get(cacheKey);
         if (cacheValue != null && !isExpire(cacheValue, method)) {
@@ -29,7 +29,8 @@ public class DataServiceDecorator {
     }
 
     private static boolean isExpire(CacheValue cacheValue, Method method) {
-        return System.currentTimeMillis() - cacheValue.getExpireTimeStamp() > method.getAnnotation(Cache.class).cacheSeconds() * 1000;
+        return System.currentTimeMillis() - cacheValue.getExpireTimeStamp()
+                > method.getAnnotation(Cache.class).cacheSeconds() * 1000;
     }
 
     private static Object getResult(Callable<Object> object, CacheKey cacheKey) throws Exception {
@@ -47,9 +48,9 @@ public class DataServiceDecorator {
         private Object[] args;
 
         CacheKey(Object object, Method method, Object[] args) {
-            this.object = object;
-            this.method = method;
-            this.args = args;
+            this.setObject(object);
+            this.setMethod(method);
+            this.setArgs(args);
         }
 
         public Object getObject() {
@@ -76,8 +77,7 @@ public class DataServiceDecorator {
             this.args = args;
         }
 
-        @Override
-        public boolean equals(Object obj) {
+        @Override public boolean equals(Object obj) {
             if (this == obj) {
                 return true;
             }
@@ -85,12 +85,14 @@ public class DataServiceDecorator {
                 return false;
             }
             CacheKey newKey = (CacheKey) obj;
-            return (Objects.equals(newKey.getObject(), this.getObject()) && Objects.equals(newKey.getMethod(), this.getMethod()) && Arrays.equals(newKey.getArgs(), this.getArgs()));
+            return (Objects.equals(newKey.getObject(), this.getObject()) && Objects
+                    .equals(newKey.getMethod(), this.getMethod()) && Arrays.equals(newKey.getArgs(), this.getArgs()));
         }
 
-        @Override
-        public int hashCode() {
-            return super.hashCode();
+        @Override public int hashCode() {
+            int result = Objects.hash(this.getObject(), this.getMethod());
+            result = 31 * result + Arrays.hashCode(this.getArgs());
+            return result;
         }
     }
 
@@ -101,8 +103,8 @@ public class DataServiceDecorator {
         Object data;
 
         CacheValue(Long expireTimeStamp, Object data) {
-            this.expireTimeStamp = expireTimeStamp;
-            this.data = data;
+            this.setExpireTimeStamp(expireTimeStamp);
+            this.setData(data);
         }
 
         public Long getExpireTimeStamp() {
