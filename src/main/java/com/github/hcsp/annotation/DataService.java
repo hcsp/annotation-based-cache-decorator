@@ -12,7 +12,7 @@ public class DataService {
      * @param id 数据ID
      * @return 查询到的数据列表
      */
-    @Cache(cacheSeconds = 2)
+    @Cache
     public List<Object> queryData(int id) {
         // 模拟一个查询操作
         Random random = new Random();
@@ -35,25 +35,5 @@ public class DataService {
         return IntStream.range(0, size)
                 .mapToObj(i -> random.nextBoolean())
                 .collect(Collectors.toList());
-    }
-
-    public static void main(String[] args) throws Exception {
-        DataService dataService = CacheClassDecorator.decorate(DataService.class).getConstructor().newInstance();
-
-        // 有缓存的查询：只有第一次执行了真正的查询操作，第二次从缓存中获取
-        System.out.println(dataService.queryData(1));
-        Thread.sleep(1 * 1000);
-        System.out.println(dataService.queryData(1));
-        Thread.sleep(1 * 1000);
-        System.out.println(dataService.queryData(1));
-        Thread.sleep(1 * 1000);
-        System.out.println(dataService.queryData(1));
-        Thread.sleep(1 * 1000);
-        System.out.println(dataService.queryData(1));
-
-        // 无缓存的查询：两次都执行了真正的查询操作
-        System.out.println(dataService.queryDataWithoutCache(1));
-        Thread.sleep(1 * 1000);
-        System.out.println(dataService.queryDataWithoutCache(1));
     }
 }
