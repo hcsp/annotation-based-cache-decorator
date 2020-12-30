@@ -1,21 +1,5 @@
 package com.github.hcsp.annotation;
 
-import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.AllArguments;
-import net.bytebuddy.implementation.bind.annotation.Origin;
-import net.bytebuddy.implementation.bind.annotation.RuntimeType;
-import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import net.bytebuddy.implementation.bind.annotation.This;
-import net.bytebuddy.matcher.ElementMatchers;
-
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -23,58 +7,9 @@ public class CacheClassDecorator {
     // 这意味着，在短时间内调用同一个服务的同一个@Cache方法两次
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
-    @SuppressWarnings("unchecked")
     public static <T> Class<T> decorate(Class<T> klass) {
-        Class<? extends T> newKclass = new ByteBuddy().subclass(klass)
-                .method(ElementMatchers.isAnnotatedWith(Cache.class))
-                .intercept(MethodDelegation.to(CacheInterceptor.class))
-                .make().load(ClassLoader.getSystemClassLoader())
-                .getLoaded();
-        return (Class<T>) newKclass;
+        return klass;
     }
-
-    public static class CacheVal {
-        List<Object> list;
-        Long time;
-
-        public CacheVal(List<Object> list, Long time) {
-            this.list = list;
-            this.time = time;
-        }
-
-        private boolean expires(int cacheSeconds) {
-            System.out.println(cacheSeconds);
-            if (cacheSeconds <= 0) {
-                return true;
-            }
-            int cacheMillis = cacheSeconds * 1000;
-            return System.currentTimeMillis() - time < cacheMillis;
-        }
-    }
-
-    public static class CacheInterceptor {
-        static Map<Integer, CacheVal> cacheMap = new ConcurrentHashMap<>();
-
-        @RuntimeType
-        public static List<Object> cache(@Origin Method method, @This Object obj, @AllArguments Object[] args, @SuperCall Callable<List<Object>> zuper) {
-            int cacheKey = (method.toString() + obj.toString() + Arrays.toString(args)).hashCode();
-            CacheVal cacheVal = cacheMap.get(cacheKey);
-            int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
-            List<Object> result = null;
-            if (cacheVal != null && cacheVal.expires(cacheSeconds)) {
-                result = cacheVal.list;
-            } else {
-                try {
-                    result = zuper.call();
-                    cacheMap.put(cacheKey, new CacheVal(result, System.currentTimeMillis()));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            return result;
-        }
-    }
-
 
     public static void main(String[] args) throws Exception {
         DataService dataService = decorate(DataService.class).getConstructor().newInstance();
