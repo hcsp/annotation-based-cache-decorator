@@ -1,15 +1,18 @@
 package com.github.hcsp.annotation;
 
-import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.*;
-import net.bytebuddy.matcher.ElementMatchers;
-
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.implementation.bind.annotation.AllArguments;
+import net.bytebuddy.implementation.bind.annotation.Origin;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
+import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bind.annotation.This;
+import net.bytebuddy.matcher.ElementMatchers;
 
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
@@ -49,9 +52,9 @@ public class CacheClassDecorator {
                 return false;
             }
             CacheKey cacheKey = (CacheKey) o;
-            return thisObject.equals(cacheKey.thisObject) &&
-                    methodName.equals(cacheKey.methodName) &&
-                    Arrays.equals(arguments, cacheKey.arguments);
+            return thisObject.equals(cacheKey.thisObject)
+                    && methodName.equals(cacheKey.methodName)
+                    && Arrays.equals(arguments, cacheKey.arguments);
         }
 
         @Override
@@ -110,7 +113,7 @@ public class CacheClassDecorator {
             //缓存生成的时间
             long time = cacheValue.time;
             int cacheSeconds = method.getDeclaredAnnotation(Cache.class).cacheSeconds();
-            return ((System.currentTimeMillis() - time) > cacheSeconds * 1000);
+            return (System.currentTimeMillis() - time) > cacheSeconds * 1000;
         }
 
     }
