@@ -68,7 +68,7 @@ public class CacheClassDecorator {
         private Object value;
         private long time;
 
-        public CacheValue(Object value, long currentTimeMillis) {
+        CacheValue(Object value, long currentTimeMillis) {
             this.value = value;
             this.time = currentTimeMillis;
         }
