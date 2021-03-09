@@ -79,10 +79,10 @@ public class CacheClassDecorator {
         // 有了这个注解，byteBuddy会忽略对入参与返回值做严格类型检查。从而使得会自动进行绑定方法与被绑定方法的参数、返回值方便的转换。
         // 这个方法的参数与返回值要与目标类需要代理的方法的参数和返回值一致。且要是唯一一致的。名字无所谓起。
         public static Object cache(                         // 注入的参数们
-                @SuperCall Callable<Object> superCall,      // 被代理对象的方法调用，可以使用.call()方法调用
-                @Origin Method method,      // 该参数分配为对它所检测的方法或构造函数的引用，被代理方法对象
-                @This Object thisObject,    // 当前动态生成的那个对象的引用，代理对象
-                @AllArguments Object[] arguments) throws Exception {
+                                                            @SuperCall Callable<Object> superCall,      // 被代理对象的方法调用，可以使用.call()方法调用
+                                                            @Origin Method method,      // 该参数分配为对它所检测的方法或构造函数的引用，被代理方法对象
+                                                            @This Object thisObject,    // 当前动态生成的那个对象的引用，代理对象
+                                                            @AllArguments Object[] arguments) throws Exception {
             CacheKey cacheKey = new CacheKey(thisObject, method.getName(), arguments);
             CacheValue resultExistingInCache = cache.get(cacheKey);
 
