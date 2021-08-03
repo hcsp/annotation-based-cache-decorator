@@ -6,17 +6,16 @@ import net.bytebuddy.implementation.bind.annotation.SuperCall;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.Callable;
 
 public class CacheInterceptor {
     private static Long previousTime = null;
     private static Object[] previousArguments;
-    private static List<Object> memoryDatabase;
+    private static Object memoryDatabase;
 
 
-    public static List<Object> getCacheDataOrRequery(
-            @SuperCall Callable<List<Object>> zuper,
+    public static Object getCacheDataOrRequery(
+            @SuperCall Callable<Object> zuper,
             @Origin Method method,
             @AllArguments Object[] arguments
     ) {
