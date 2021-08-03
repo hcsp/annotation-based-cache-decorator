@@ -2,6 +2,7 @@ package com.github.hcsp.annotation;
 
 import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Origin;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.implementation.bind.annotation.This;
 
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CacheInterceptor {
     private static final ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
 
+    @RuntimeType
     public static Object getCacheDataOrRequery(
             @SuperCall Callable<Object> superCall,
             @Origin Method method,
