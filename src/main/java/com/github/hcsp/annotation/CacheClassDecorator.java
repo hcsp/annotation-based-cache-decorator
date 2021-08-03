@@ -1,10 +1,8 @@
 package com.github.hcsp.annotation;
 
 import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.implementation.MethodDelegation;
-
-import java.util.stream.Stream;
+import net.bytebuddy.matcher.ElementMatchers;
 
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
@@ -17,18 +15,11 @@ public class CacheClassDecorator {
     public static <T> Class<T> decorate(Class<T> klass) {
         return (Class<T>) new ByteBuddy()
                 .subclass(klass)
-                .method(CacheClassDecorator::methodWithCacheAnnotation)
+                .method(ElementMatchers.isAnnotatedWith(Cache.class))
                 .intercept(MethodDelegation.to(CacheInterceptor.class))
                 .make()
                 .load(klass.getClassLoader())
                 .getLoaded();
-    }
-
-    private static boolean methodWithCacheAnnotation(MethodDescription methodDescription) {
-        int count = (int) Stream.of(methodDescription.getDeclaredAnnotations())
-                .filter(annotationDescriptions -> annotationDescriptions.isAnnotationPresent(Cache.class))
-                .count();
-        return count > 0;
     }
 
     public static void main(String[] args) throws Exception {
