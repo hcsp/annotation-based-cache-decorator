@@ -17,16 +17,20 @@ public class CacheInterceptor {
             @Origin Method method,
             @AllArguments Object[] arguments,
             @This Object thisObject
-    ) throws Exception {
-        CacheKey cacheKey = new CacheKey(method.getName(), arguments, thisObject);
-        int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
-        CacheValue resultExistingInCache = cache.get(cacheKey);
-        if (resultExistingInCache != null && System.currentTimeMillis() - resultExistingInCache.getQueryTime() < cacheSeconds * 1000L) {
-            return resultExistingInCache.getResult();
-        }
+    ) {
+        try {
+            CacheKey cacheKey = new CacheKey(method.getName(), arguments, thisObject);
+            int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
+            CacheValue resultExistingInCache = cache.get(cacheKey);
+            if (resultExistingInCache != null && System.currentTimeMillis() - resultExistingInCache.getQueryTime() < cacheSeconds * 1000L) {
+                return resultExistingInCache.getResult();
+            }
 
-        Object realMethodInvocationResult = superCall.call();
-        cache.put(cacheKey, new CacheValue(System.currentTimeMillis(), realMethodInvocationResult));
-        return realMethodInvocationResult;
+            Object realMethodInvocationResult = superCall.call();
+            cache.put(cacheKey, new CacheValue(System.currentTimeMillis(), realMethodInvocationResult));
+            return realMethodInvocationResult;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
