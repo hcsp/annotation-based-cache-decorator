@@ -12,7 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CacheInterceptor {
     private static final ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
 
-
     public static Object getCacheDataOrRequery(
             @SuperCall Callable<Object> superCall,
             @Origin Method method,
