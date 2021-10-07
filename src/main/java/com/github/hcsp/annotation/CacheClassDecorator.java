@@ -1,5 +1,16 @@
 package com.github.hcsp.annotation;
 
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.implementation.bind.annotation.*;
+import net.bytebuddy.matcher.ElementMatchers;
+
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -7,8 +18,90 @@ public class CacheClassDecorator {
     // 这意味着，在短时间内调用同一个服务的同一个@Cache方法两次
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
+    @SuppressWarnings("unchecked")
     public static <T> Class<T> decorate(Class<T> klass) {
-        return klass;
+        return (Class<T>) new ByteBuddy()
+                .subclass(klass)
+                .method(ElementMatchers.isAnnotatedWith(Cache.class))
+                .intercept(MethodDelegation.to(CacheAdvisor.class))
+                .make()
+                .load(klass.getClassLoader())
+                .getLoaded();
+    }
+
+    private static class CacheKey {
+        private Object thisObject;
+        private String methodName;
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            CacheKey cacheKey = (CacheKey) o;
+            return Objects.equals(thisObject, cacheKey.thisObject) &&
+                    Objects.equals(methodName, cacheKey.methodName) &&
+                    Arrays.equals(arguments, cacheKey.arguments);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hash(thisObject, methodName);
+            result = 31 * result + Arrays.hashCode(arguments);
+            return result;
+        }
+
+        CacheKey(Object thisObject, String methodName, Object[] arguments) {
+            this.thisObject = thisObject;
+            this.methodName = methodName;
+            this.arguments = arguments;
+        }
+
+        private Object[] arguments;
+    }
+
+    private static class CacheValue {
+        private long time;
+        private Object value;
+
+        CacheValue(Object value, long time) {
+            this.time = time;
+            this.value = value;
+        }
+
+    }
+
+    public static class CacheAdvisor {
+        private static ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
+
+        @RuntimeType//不写会找不到这个delegation
+        public static Object cache(
+                @SuperCall Callable<Object> superCall,
+                @Origin Method method,
+                @This Object thisObject,
+                @AllArguments Object[] arguments
+        ) throws Exception {
+            CacheKey cacheKey = new CacheKey(thisObject, method.getName(), arguments);
+            final CacheValue resultExistingInCache = cache.get(cacheKey);
+            if (resultExistingInCache != null) {
+                int cacheSeconds = method.getAnnotation(Cache.class).cacheSeconds();
+                if (System.currentTimeMillis() - resultExistingInCache.time > cacheSeconds * 1000) {
+                    return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
+                }
+                return resultExistingInCache.value;
+            } else {
+                return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
+            }
+        }
+
+        private static Object invokeRealMethodAndPutIntoCache(@SuperCall Callable<Object> superCall, CacheKey cacheKey) throws Exception {
+            Object result = superCall.call();
+            cache.put(cacheKey, new CacheValue(result, System.currentTimeMillis()));
+            return result;
+        }
     }
 
     public static void main(String[] args) throws Exception {
