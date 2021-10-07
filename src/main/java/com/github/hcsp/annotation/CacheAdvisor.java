@@ -54,7 +54,7 @@ public class CacheAdvisor {
         Object thisObject;
         Object[] arguments;
 
-        public CacheKey(String methodName, Object thisObject, Object[] arguments) {
+        CacheKey(String methodName, Object thisObject, Object[] arguments) {
             this.methodName = methodName;
             this.thisObject = thisObject;
             this.arguments = arguments;
@@ -62,8 +62,12 @@ public class CacheAdvisor {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
             CacheKey cacheKey = (CacheKey) o;
             return methodName.equals(cacheKey.methodName) &&
                 thisObject.equals(cacheKey.thisObject) &&
@@ -82,7 +86,7 @@ public class CacheAdvisor {
         Object value;
         long time;
 
-        public CacheValue(Object value, long time) {
+        CacheValue(Object value, long time) {
             this.value = value;
             this.time = time;
         }
