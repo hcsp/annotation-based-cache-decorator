@@ -75,7 +75,7 @@ public class CacheClassDecorator {
     }
 
     public static class CacheAdvisor {
-        private static final ConcurrentHashMap<CacheKey, CacheValue> aache = new ConcurrentHashMap<>();
+        private static final ConcurrentHashMap<CacheKey, CacheValue> cacheMap = new ConcurrentHashMap<>();
 
         @RuntimeType
         public static Object cache(
@@ -84,7 +84,7 @@ public class CacheClassDecorator {
                 @This Object thisObject,
                 @AllArguments Object[] arguments) throws Exception {
             CacheKey cacheKey = new CacheKey(thisObject, method.getName(), arguments);
-            final CacheValue resultExistingInCache = aache.get(cacheKey);
+            final CacheValue resultExistingInCache = cacheMap.get(cacheKey);
 
             if (resultExistingInCache != null) {
 
@@ -100,7 +100,7 @@ public class CacheClassDecorator {
 
         private static Object invokeRealMethodAndPutIntoCache(@SuperCall Callable<Object> superCall, CacheKey cacheKey) throws Exception {
             Object realMethodInvocationResult = superCall.call();
-            aache.put(cacheKey, new CacheValue(realMethodInvocationResult, System.currentTimeMillis()));
+            cacheMap.put(cacheKey, new CacheValue(realMethodInvocationResult, System.currentTimeMillis()));
             return realMethodInvocationResult;
         }
 
