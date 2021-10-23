@@ -2,7 +2,11 @@ package com.github.hcsp.annotation;
 
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.*;
+import net.bytebuddy.implementation.bind.annotation.Origin;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
+import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bind.annotation.This;
+import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.matcher.ElementMatchers;
 
 import java.lang.reflect.Method;
@@ -71,7 +75,7 @@ public class CacheClassDecorator {
     }
 
     public static class CacheAdvisor {
-        private static final ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
+        private static final ConcurrentHashMap<CacheKey, CacheValue> aache = new ConcurrentHashMap<>();
 
         @RuntimeType
         public static Object cache(
@@ -80,7 +84,7 @@ public class CacheClassDecorator {
                 @This Object thisObject,
                 @AllArguments Object[] arguments) throws Exception {
             CacheKey cacheKey = new CacheKey(thisObject, method.getName(), arguments);
-            final CacheValue resultExistingInCache = cache.get(cacheKey);
+            final CacheValue resultExistingInCache = aache.get(cacheKey);
 
             if (resultExistingInCache != null) {
 
@@ -96,7 +100,7 @@ public class CacheClassDecorator {
 
         private static Object invokeRealMethodAndPutIntoCache(@SuperCall Callable<Object> superCall, CacheKey cacheKey) throws Exception {
             Object realMethodInvocationResult = superCall.call();
-            cache.put(cacheKey, new CacheValue(realMethodInvocationResult, System.currentTimeMillis()));
+            aache.put(cacheKey, new CacheValue(realMethodInvocationResult, System.currentTimeMillis()));
             return realMethodInvocationResult;
         }
 
