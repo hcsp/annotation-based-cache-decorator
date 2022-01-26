@@ -2,7 +2,11 @@ package com.github.hcsp.annotation;
 
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.*;
+import net.bytebuddy.implementation.bind.annotation.AllArguments;
+import net.bytebuddy.implementation.bind.annotation.Origin;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
+import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bind.annotation.This;
 import net.bytebuddy.matcher.ElementMatchers;
 
 import java.lang.reflect.Method;
@@ -72,7 +76,7 @@ CacheClassDecorator {
     }
 
     public static class CacheAdvisor {
-        public static ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
+        private static ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
 
         @RuntimeType
         public static Object cache(
@@ -90,9 +94,9 @@ CacheClassDecorator {
                 if (cacheExpired(resultExistingInCache, method)) {
                     return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
 
-                } else {
-                    return resultExistingInCache;
                 }
+                return resultExistingInCache.value;
+
             } else {
                 return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
             }
