@@ -71,9 +71,19 @@ public class CacheClassDecorator {
         }
     }
 
+    public static class CacheValue {
+        private Object value;
+        private long time;
+
+        public CacheValue(Object value, long time) {
+            this.value = value;
+            this.time = time;
+        }
+    }
+
     public static class CacheAdvisor {
 
-        private static ConcurrentHashMap<CacheKey, Object> cache = new ConcurrentHashMap<>();
+        private static ConcurrentHashMap<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
 
         @RuntimeType
         public static Object cache(
@@ -82,15 +92,29 @@ public class CacheClassDecorator {
                 @This Object thisObject,
                 @AllArguments Object[] arguments) throws Exception {
             CacheKey cacheKey = new CacheKey(thisObject, method.getName(), arguments);
-            final Object resultExistingInCache = cache.get(cacheKey);
-            // 如果缓存中存在结果，就返回缓存中的结果
+            final CacheValue resultExistingInCache = cache.get(cacheKey);
+            // 如果缓存中存在结果并且没有过期，就返回缓存中的结果
             if (Objects.nonNull(resultExistingInCache)) {
-                return resultExistingInCache;
+                if (cacheExpires(resultExistingInCache, method)) {
+                    return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
+                }
+                return resultExistingInCache.value;
             }
-            Object realMethodInvocationResult = superCall.call();
-            cache.put(cacheKey, realMethodInvocationResult);
             // 否则 执行真正的方法调用，并且把方法调用的结果放入缓存中，返回调用结果
+            return invokeRealMethodAndPutIntoCache(superCall, cacheKey);
+        }
+
+        private static Object invokeRealMethodAndPutIntoCache(@SuperCall Callable<Object> superCall,
+                CacheKey cacheKey) throws Exception {
+            Object realMethodInvocationResult = superCall.call();
+            cache.put(cacheKey, new CacheValue(realMethodInvocationResult, System.currentTimeMillis()));
             return realMethodInvocationResult;
+        }
+
+        private static boolean cacheExpires(CacheValue cacheValue, Method method) {
+            long time = cacheValue.time;
+            int cacheSecond = method.getAnnotation(Cache.class).cacheSeconds();
+            return System.currentTimeMillis() - time > cacheSecond * 1000;
         }
     }
 
@@ -101,7 +125,8 @@ public class CacheClassDecorator {
         System.out.println(dataService.queryData(1));
         Thread.sleep(1 * 1000);
         System.out.println(dataService.queryData(1));
-
+        Thread.sleep(2 * 1000);
+        System.out.println(dataService.queryData(1));
         // 无缓存的查询：两次都执行了真正的查询操作
         System.out.println(dataService.queryDataWithoutCache(1));
         Thread.sleep(1 * 1000);
