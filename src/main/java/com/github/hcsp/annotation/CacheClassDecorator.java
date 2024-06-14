@@ -1,17 +1,5 @@
 package com.github.hcsp.annotation;
 
-import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.*;
-import net.bytebuddy.matcher.ElementMatchers;
-
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-
 public class CacheClassDecorator {
     // 将传入的服务类Class进行增强
     // 使得返回一个具有如下功能的Class：
@@ -19,95 +7,8 @@ public class CacheClassDecorator {
     // 这意味着，在短时间内调用同一个服务的同一个@Cache方法两次
     // 它实际上只被调用一次，第二次的结果直接从缓存中获取
     // 注意，缓存的实现需要是线程安全的
-    private static class CacheKey {
-        private final String methodName;
-        private final Object[] args;
-        private final Object thisObj;
-
-        CacheKey(String methodName, Object[] args, Object thisObj) {
-            this.methodName = methodName;
-            this.args = args;
-            this.thisObj = thisObj;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            CacheKey cacheKey = (CacheKey) o;
-            return Objects.equals(methodName, cacheKey.methodName) && Objects.deepEquals(args, cacheKey.args) && Objects.equals(thisObj, cacheKey.thisObj);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(methodName, Arrays.hashCode(args), thisObj);
-        }
-    }
-
-    private static class CacheValue {
-        private final Object data;
-        private final long updateAt;
-
-        CacheValue(Object data, long updateAt) {
-            this.data = data;
-            this.updateAt = updateAt;
-        }
-
-        public Object getData() {
-            return data;
-        }
-
-        public long getUpdateAt() {
-            return updateAt;
-        }
-    }
-
-    private static final Map<CacheKey, CacheValue> cache = new ConcurrentHashMap<>();
-
-    public static <T> Class<? extends T> decorate(Class<T> klass) {
-        return new ByteBuddy()
-                .subclass(klass)
-                .method(ElementMatchers.isAnnotatedWith(Cache.class))
-                .intercept(MethodDelegation.to(CacheAdvice.class))
-                .make().load(klass.getClassLoader()).getLoaded();
-    }
-
-    public static class CacheAdvice {
-        @RuntimeType
-        public static Object cache(
-                @SuperCall Callable<Object> zuper,
-                @This Object thisObj,
-                @Origin Method method,
-                @AllArguments Object[] args
-        ) throws Exception {
-            CacheKey cacheKey = new CacheKey(method.getName(), args, thisObj);
-            if (cache.containsKey(cacheKey)) {
-                CacheValue cacheValue = cache.get(cacheKey);
-                if (isCacheExpires(method, cacheValue)) {
-                    return callOriginAndPutResultToCache(zuper, cacheKey);
-                } else {
-                    return cacheValue.getData();
-                }
-            } else {
-                return callOriginAndPutResultToCache(zuper, cacheKey);
-            }
-        }
-    }
-
-    private static boolean isCacheExpires(Method method, CacheValue cacheValue) {
-        Cache anno = method.getAnnotation(Cache.class);
-        return System.currentTimeMillis() - cacheValue.getUpdateAt() > anno.cacheSeconds() * 1000L;
-    }
-
-    private static Object callOriginAndPutResultToCache(Callable<Object> zuper, CacheKey cacheKey) throws Exception {
-        Object result = zuper.call();
-        CacheValue cacheValue = new CacheValue(result, System.currentTimeMillis());
-        cache.put(cacheKey, cacheValue);
-        return result;
+    public static <T> Class<T> decorate(Class<T> klass) {
+        return klass;
     }
 
     public static void main(String[] args) throws Exception {
